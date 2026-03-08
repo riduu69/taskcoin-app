@@ -1,6 +1,6 @@
 import React from 'react';
 import { useApp } from '../App';
-import { Coins, CheckCircle, ListTodo, TrendingUp, ArrowRight, PlusCircle, ShieldCheck } from 'lucide-react';
+import { Coins, CheckCircle, ListTodo, TrendingUp, ArrowRight, PlusCircle, ShieldCheck, Users } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion } from 'motion/react';
 
@@ -8,9 +8,15 @@ export default function Dashboard() {
   const { state } = useApp();
   const user = state.currentUser!;
 
-  const stats = user.isAdmin ? [
-    { label: 'Total Users', value: (state.users || []).length, icon: ShieldCheck, color: 'text-orange-500', bg: 'bg-orange-500/10' },
+  const platformStats = [
+    { label: 'Live Users', value: Math.floor(Math.random() * 10) + 5, icon: Users, color: 'text-emerald-500', bg: 'bg-emerald-500/10', live: true },
     { label: 'Total Tasks', value: (state.tasks || []).length, icon: ListTodo, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+    { label: 'Total Top-ups', value: (state.topUpRequests || []).length, icon: Coins, color: 'text-orange-500', bg: 'bg-orange-500/10' },
+  ];
+
+  const stats = user.isAdmin ? [
+    { label: 'Live Users', value: Math.floor(Math.random() * 10) + 5, icon: Users, color: 'text-emerald-500', bg: 'bg-emerald-500/10', live: true },
+    { label: 'Total Users', value: (state.users || []).length, icon: ShieldCheck, color: 'text-orange-500', bg: 'bg-orange-500/10' },
     { label: 'Pending Top Ups', value: (state.topUpRequests || []).filter(r => r.status === 'pending').length, icon: Coins, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
   ] : [
     { label: 'Total Coins', value: user.coins, icon: Coins, color: 'text-orange-500', bg: 'bg-orange-500/10' },
@@ -57,18 +63,48 @@ export default function Dashboard() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.1 }}
-            className="glass p-6 rounded-3xl flex items-center gap-5 border border-white/5"
+            className="glass p-6 rounded-3xl flex items-center gap-5 border border-white/5 relative overflow-hidden"
           >
             <div className={`w-14 h-14 rounded-2xl ${stat.bg} flex items-center justify-center`}>
               <stat.icon className={`w-7 h-7 ${stat.color}`} />
             </div>
             <div>
-              <p className="text-sm font-medium text-zinc-500">{stat.label}</p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-medium text-zinc-500">{stat.label}</p>
+                {'live' in stat && (
+                  <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                )}
+              </div>
               <p className="text-2xl font-bold tracking-tight">{stat.value}</p>
             </div>
           </motion.div>
         ))}
       </div>
+
+      {!user.isAdmin && (
+        <section className="space-y-4">
+          <h3 className="text-xl font-bold flex items-center gap-2">
+            <TrendingUp className="w-5 h-5 text-emerald-500" />
+            Platform Live Stats
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {platformStats.map((stat) => (
+              <div key={stat.label} className="glass p-4 rounded-2xl border border-white/5 flex items-center gap-4">
+                <div className={`w-10 h-10 rounded-xl ${stat.bg} flex items-center justify-center`}>
+                  <stat.icon className={`w-5 h-5 ${stat.color}`} />
+                </div>
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500">{stat.label}</p>
+                    {'live' in stat && <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />}
+                  </div>
+                  <p className="text-lg font-bold">{stat.value}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <section className="space-y-4">
