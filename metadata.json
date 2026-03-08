@@ -1,0 +1,5 @@
+{
+  "name": "TaskCoin",
+  "description": "A social media task marketplace where users earn coins by completing tasks and spend them to promote their own social profiles.",
+  "requestFramePermissions": []
+}
