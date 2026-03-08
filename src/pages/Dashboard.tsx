@@ -1,6 +1,6 @@
 import React from 'react';
 import { useApp } from '../App';
-import { Coins, CheckCircle, ListTodo, TrendingUp, ArrowRight, PlusCircle, ShieldCheck, Users } from 'lucide-react';
+import { Coins, CheckCircle, ListTodo, TrendingUp, ArrowRight, PlusCircle, ShieldCheck, Users, Wallet } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion } from 'motion/react';
 
@@ -11,17 +11,17 @@ export default function Dashboard() {
   const platformStats = [
     { label: 'Live Users', value: Math.floor(Math.random() * 10) + 5, icon: Users, color: 'text-emerald-500', bg: 'bg-emerald-500/10', live: true },
     { label: 'Total Tasks', value: (state.tasks || []).length, icon: ListTodo, color: 'text-blue-500', bg: 'bg-blue-500/10' },
-    { label: 'Total Top-ups', value: (state.topUpRequests || []).length, icon: Coins, color: 'text-orange-500', bg: 'bg-orange-500/10' },
+    { label: 'Total Paid', value: (state.withdrawRequests || []).filter(r => r.status === 'approved').length * 50, icon: Coins, color: 'text-orange-500', bg: 'bg-orange-500/10' },
   ];
 
   const stats = user.isAdmin ? [
     { label: 'Live Users', value: Math.floor(Math.random() * 10) + 5, icon: Users, color: 'text-emerald-500', bg: 'bg-emerald-500/10', live: true },
-    { label: 'Total Users', value: (state.users || []).length, icon: ShieldCheck, color: 'text-orange-500', bg: 'bg-orange-500/10' },
-    { label: 'Pending Top Ups', value: (state.topUpRequests || []).filter(r => r.status === 'pending').length, icon: Coins, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+    { label: 'Pending Proofs', value: (state.taskSubmissions || []).filter(s => s.status === 'pending').length, icon: CheckCircle, color: 'text-orange-500', bg: 'bg-orange-500/10' },
+    { label: 'Pending Withdraws', value: (state.withdrawRequests || []).filter(r => r.status === 'pending').length, icon: Wallet, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
   ] : [
     { label: 'Total Coins', value: user.coins, icon: Coins, color: 'text-orange-500', bg: 'bg-orange-500/10' },
     { label: 'Completed Tasks', value: user.completedTasks.length, icon: CheckCircle, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
-    { label: 'Active Tasks', value: (state.tasks || []).filter(t => t.creatorId === user.id && t.status === 'active').length, icon: ListTodo, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+    { label: 'Pending Proofs', value: (state.taskSubmissions || []).filter(s => s.userId === user.id && s.status === 'pending').length, icon: ListTodo, color: 'text-blue-500', bg: 'bg-blue-500/10' },
   ];
 
   const recentTasks = (state.tasks || []).slice(0, 3);
@@ -181,5 +181,3 @@ export default function Dashboard() {
     </div>
   );
 }
-
-

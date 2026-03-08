@@ -14,24 +14,32 @@ export default function CreateTask() {
   const [quantity, setQuantity] = useState(10);
   const [reward, setReward] = useState(5);
   const [success, setSuccess] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const totalCost = quantity * reward;
   const canAfford = user.coins >= totalCost;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!canAfford) return;
+    if (!canAfford || loading) return;
 
-    addTask({
-      type,
-      link,
-      reward,
-      requiredCount: quantity,
-    });
+    setLoading(true);
+    try {
+      await addTask({
+        type,
+        link,
+        reward,
+        requiredCount: quantity,
+      });
 
-    setSuccess(true);
-    setLink('');
-    setTimeout(() => setSuccess(false), 3000);
+      setSuccess(true);
+      setLink('');
+      setTimeout(() => setSuccess(false), 3000);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const taskTypes: TaskType[] = ['facebook_like', 'instagram_follow', 'youtube_subscribe', 'tiktok_follow'];
@@ -150,11 +158,15 @@ export default function CreateTask() {
 
           <button
             type="submit"
-            disabled={!canAfford || !link}
+            disabled={!canAfford || !link || loading}
             className="w-full bg-orange-500 hover:bg-orange-600 disabled:bg-zinc-800 disabled:text-zinc-500 disabled:cursor-not-allowed text-white font-black py-5 rounded-2xl shadow-xl shadow-orange-500/20 transition-all duration-300 flex items-center justify-center gap-2 group"
           >
-            <PlusCircle className="w-6 h-6" />
-            Launch Task
+            {loading ? 'Launching...' : (
+              <>
+                <PlusCircle className="w-6 h-6" />
+                Launch Task
+              </>
+            )}
           </button>
         </form>
       </div>

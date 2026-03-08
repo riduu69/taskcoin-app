@@ -1,34 +1,33 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useApp } from '../App';
-import { Coins, Mail, Lock, LogIn, ArrowRight } from 'lucide-react';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '../lib/firebase';
+import { Coins, Mail, Lock, ArrowRight } from 'lucide-react';
 import { motion } from 'motion/react';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const { state, login } = useApp();
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const user = state.users.find(u => u.email === email);
-    
-    const isAdmin = user?.email === 'admin69@taskcoin';
-    const correctPassword = isAdmin ? 'riduu69' : 'password';
-
-    if (user && password === correctPassword) {
-      login(user);
+    setLoading(true);
+    setError('');
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
       navigate('/');
-    } else {
-      setError(`Invalid email or password. (Hint: use ${isAdmin ? 'riduu69' : 'password'})`);
+    } catch (err: any) {
+      setError(err.message || 'Failed to sign in');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center p-6 bg-zinc-950 relative overflow-hidden">
-      {/* Background Glows */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden -z-10">
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-orange-500/10 rounded-full blur-[120px]" />
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-[120px]" />
@@ -87,10 +86,11 @@ export default function Login() {
 
             <button
               type="submit"
-              className="w-full bg-orange-500 hover:bg-orange-600 text-white font-black py-4 rounded-2xl shadow-xl shadow-orange-500/20 transition-all duration-300 flex items-center justify-center gap-2 group"
+              disabled={loading}
+              className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white font-black py-4 rounded-2xl shadow-xl shadow-orange-500/20 transition-all duration-300 flex items-center justify-center gap-2 group"
             >
-              Sign In
-              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              {loading ? 'Signing In...' : 'Sign In'}
+              {!loading && <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />}
             </button>
           </form>
 
@@ -100,11 +100,6 @@ export default function Login() {
               <Link to="/register" className="text-orange-500 font-bold hover:underline">Sign up for free</Link>
             </p>
           </div>
-        </div>
-
-        <div className="text-center space-y-2 text-xs text-zinc-600 font-medium tracking-widest uppercase">
-          <p>User: user@example.com / password</p>
-          <p>Admin: admin69@taskcoin / riduu69</p>
         </div>
       </motion.div>
     </div>

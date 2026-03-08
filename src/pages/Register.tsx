@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useApp } from '../App';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
+import { auth, db } from '../lib/firebase';
 import { Coins, Mail, Lock, User as UserIcon, ArrowRight } from 'lucide-react';
 import { motion } from 'motion/react';
 import { User } from '../types';
@@ -9,24 +11,35 @@ export default function Register() {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const { state, register } = useApp();
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    const newUser: User = {
-      id: `user-${Date.now()}`,
-      username,
-      email,
-      coins: 50, // Welcome bonus
-      isAdmin: false,
-      completedTasks: [],
-      createdAt: new Date().toISOString(),
-    };
+    setLoading(true);
+    setError('');
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const firebaseUser = userCredential.user;
 
-    register(newUser);
-    navigate('/');
+      const newUser: User = {
+        id: firebaseUser.uid,
+        username,
+        email,
+        coins: 50, // Welcome bonus
+        isAdmin: false,
+        completedTasks: [],
+        createdAt: new Date().toISOString(),
+      };
+
+      await setDoc(doc(db, 'users', firebaseUser.uid), newUser);
+      navigate('/');
+    } catch (err: any) {
+      setError(err.message || 'Failed to create account');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -51,6 +64,12 @@ export default function Register() {
 
         <div className="glass p-8 rounded-[2.5rem] border border-white/5 shadow-2xl">
           <form onSubmit={handleSubmit} className="space-y-5">
+            {error && (
+              <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-sm p-4 rounded-2xl text-center">
+                {error}
+              </div>
+            )}
+            
             <div className="space-y-2">
               <label className="text-sm font-bold text-zinc-400 ml-1">Username</label>
               <div className="relative">
@@ -98,10 +117,11 @@ export default function Register() {
 
             <button
               type="submit"
-              className="w-full bg-orange-500 hover:bg-orange-600 text-white font-black py-4 rounded-2xl shadow-xl shadow-orange-500/20 transition-all duration-300 flex items-center justify-center gap-2 group mt-2"
+              disabled={loading}
+              className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white font-black py-4 rounded-2xl shadow-xl shadow-orange-500/20 transition-all duration-300 flex items-center justify-center gap-2 group mt-2"
             >
-              Create Account
-              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              {loading ? 'Creating Account...' : 'Create Account'}
+              {!loading && <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />}
             </button>
           </form>
 

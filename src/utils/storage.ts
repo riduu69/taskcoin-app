@@ -50,6 +50,8 @@ const DEFAULT_STATE: AppState = {
     }
   ],
   topUpRequests: [],
+  withdrawRequests: [],
+  taskSubmissions: [],
   currentUser: null,
 };
 

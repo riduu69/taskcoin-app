@@ -23,11 +23,36 @@ export interface Task {
   createdAt: string;
 }
 
+export interface TaskSubmission {
+  id: string;
+  taskId: string;
+  userId: string;
+  username: string;
+  taskType: TaskType;
+  screenshotUrl: string;
+  reward: number;
+  status: 'pending' | 'approved' | 'rejected';
+  createdAt: string;
+}
+
 export interface TopUpRequest {
   id: string;
   userId: string;
   username: string;
   amount: number;
+  method: 'bKash' | 'Nagad';
+  transactionId: string;
+  status: 'pending' | 'approved' | 'rejected';
+  createdAt: string;
+}
+
+export interface WithdrawRequest {
+  id: string;
+  userId: string;
+  username: string;
+  amount: number;
+  method: 'bKash' | 'Nagad';
+  accountNumber: string;
   status: 'pending' | 'approved' | 'rejected';
   createdAt: string;
 }
@@ -36,5 +61,7 @@ export interface AppState {
   users: User[];
   tasks: Task[];
   topUpRequests: TopUpRequest[];
+  withdrawRequests: WithdrawRequest[];
+  taskSubmissions: TaskSubmission[];
   currentUser: User | null;
 }

@@ -18,6 +18,7 @@ export default function Layout() {
     { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/earn', icon: Coins, label: 'Earn' },
     { path: '/topup', icon: Wallet, label: 'Top Up' },
+    { path: '/withdraw', icon: Wallet, label: 'Withdraw' },
     { path: '/create', icon: PlusCircle, label: 'Create' },
     { path: '/profile', icon: User, label: 'Profile' },
   ];

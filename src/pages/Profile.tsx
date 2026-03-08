@@ -1,6 +1,6 @@
 import React from 'react';
 import { useApp } from '../App';
-import { Coins, User as UserIcon, Mail, Calendar, Settings, LogOut, ShieldCheck, History, CheckCircle2 } from 'lucide-react';
+import { Coins, Mail, Calendar, Settings, LogOut, ShieldCheck, History, CheckCircle2 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { getTaskLabel } from '../utils/storage';
 
@@ -54,17 +54,6 @@ export default function Profile() {
               <LogOut className="w-6 h-6 text-red-400 group-hover:scale-110 transition-transform" />
             </button>
           </div>
-          <button 
-            onClick={() => {
-              if (window.confirm('Are you sure you want to reset all data? This will clear your local storage and log you out.')) {
-                localStorage.clear();
-                window.location.reload();
-              }
-            }}
-            className="text-[10px] font-black uppercase tracking-widest text-zinc-600 hover:text-red-500 transition-colors text-center"
-          >
-            Reset App Data
-          </button>
         </div>
       </header>
 

@@ -1,21 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useApp } from '../App';
-import { Coins, ExternalLink, CheckCircle2, AlertCircle, Search, Filter, X } from 'lucide-react';
+import { Coins, ExternalLink, CheckCircle2, AlertCircle, Search, X, Upload, Image as ImageIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { getTaskLabel } from '../utils/storage';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { storage } from '../lib/firebase';
 
 export default function Earn() {
-  const { state, completeTask } = useApp();
+  const { state, submitProof } = useApp();
   const user = state.currentUser!;
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
-  const [confirmingId, setConfirmingId] = useState<string | null>(null);
-  const [toast, setToast] = useState<{ show: boolean; message: string; reward: number } | null>(null);
+  const [submittingId, setSubmittingId] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const availableTasks = (state.tasks || []).filter(task => 
     task.creatorId !== user.id && 
     task.status === 'active' && 
-    !user.completedTasks.includes(task.id)
+    !user.completedTasks.includes(task.id) &&
+    !state.taskSubmissions.some(s => s.taskId === task.id && s.userId === user.id && s.status === 'pending')
   );
 
   const filteredTasks = availableTasks.filter(task => {
@@ -25,31 +32,46 @@ export default function Earn() {
     return matchesFilter && matchesSearch;
   });
 
-  const handleConfirm = (taskId: string) => {
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+      setPreviewUrl(URL.createObjectURL(file));
+    }
+  };
+
+  const handleSubmitProof = async (taskId: string) => {
+    if (!selectedFile) return;
     const task = state.tasks.find(t => t.id === taskId);
     if (!task) return;
 
-    setConfirmingId(taskId);
-    // Simulate verification delay
-    setTimeout(() => {
-      completeTask(taskId);
-      setConfirmingId(null);
-      setToast({ 
-        show: true, 
-        message: `Task completed!`, 
-        reward: task.reward 
+    setSubmittingId(taskId);
+    try {
+      const storageRef = ref(storage, `proofs/${user.id}_${taskId}_${Date.now()}`);
+      await uploadBytes(storageRef, selectedFile);
+      const downloadUrl = await getDownloadURL(storageRef);
+
+      await submitProof({
+        taskId,
+        taskType: task.type,
+        screenshotUrl: downloadUrl,
+        reward: task.reward,
       });
-      
-      // Auto-hide toast
-      setTimeout(() => {
-        setToast(null);
-      }, 3000);
-    }, 1500);
+
+      setToast({ show: true, message: 'Proof submitted! Waiting for approval.', type: 'success' });
+      setActiveTaskId(null);
+      setSelectedFile(null);
+      setPreviewUrl(null);
+    } catch (err) {
+      setToast({ show: true, message: 'Failed to upload proof.', type: 'error' });
+    } finally {
+      setSubmittingId(null);
+      setTimeout(() => setToast(null), 3000);
+    }
   };
 
   return (
     <div className="space-y-8">
-      {/* Toast Notification */}
       <AnimatePresence>
         {toast && (
           <motion.div
@@ -58,23 +80,14 @@ export default function Earn() {
             exit={{ opacity: 0, y: -50, x: '-50%' }}
             className="fixed top-0 left-1/2 z-[100] w-[90%] max-w-sm"
           >
-            <div className="glass bg-emerald-500/20 border-emerald-500/30 p-4 rounded-2xl flex items-center justify-between shadow-2xl shadow-emerald-500/10">
+            <div className={`glass ${toast.type === 'success' ? 'bg-emerald-500/20 border-emerald-500/30' : 'bg-red-500/20 border-red-500/30'} p-4 rounded-2xl flex items-center justify-between shadow-2xl`}>
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center shadow-lg shadow-emerald-500/20">
-                  <CheckCircle2 className="text-white w-6 h-6" />
+                <div className={`w-10 h-10 rounded-xl ${toast.type === 'success' ? 'bg-emerald-500' : 'bg-red-500'} flex items-center justify-center shadow-lg`}>
+                  {toast.type === 'success' ? <CheckCircle2 className="text-white w-6 h-6" /> : <AlertCircle className="text-white w-6 h-6" />}
                 </div>
-                <div>
-                  <p className="font-bold text-white">{toast.message}</p>
-                  <div className="flex items-center gap-1.5">
-                    <Coins className="w-3.5 h-3.5 text-orange-400" />
-                    <p className="text-xs font-bold text-orange-400">+{toast.reward} coins added</p>
-                  </div>
-                </div>
+                <p className="font-bold text-white text-sm">{toast.message}</p>
               </div>
-              <button 
-                onClick={() => setToast(null)}
-                className="p-2 hover:bg-white/10 rounded-lg transition-colors"
-              >
+              <button onClick={() => setToast(null)} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
                 <X className="w-4 h-4 text-zinc-400" />
               </button>
             </div>
@@ -85,7 +98,7 @@ export default function Earn() {
       <header className="space-y-4">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Earn Coins</h2>
-          <p className="text-zinc-500 mt-1">Complete tasks to grow your balance.</p>
+          <p className="text-zinc-500 mt-1">Complete tasks and upload proof to earn.</p>
         </div>
 
         <div className="flex flex-col md:flex-row gap-4">
@@ -153,35 +166,64 @@ export default function Earn() {
                   </div>
                 </div>
 
-                <div className="flex gap-3">
-                  <a
-                    href={task.link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex-1 flex items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-white font-bold py-4 rounded-2xl transition-all"
-                  >
-                    Open Link
-                    <ExternalLink className="w-4 h-4" />
-                  </a>
-                  <button
-                    onClick={() => handleConfirm(task.id)}
-                    disabled={confirmingId === task.id}
-                    className={`flex-1 flex items-center justify-center gap-2 font-bold py-4 rounded-2xl transition-all ${
-                      confirmingId === task.id 
-                        ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed' 
-                        : 'bg-orange-500 hover:bg-orange-600 text-white shadow-lg shadow-orange-500/20'
-                    }`}
-                  >
-                    {confirmingId === task.id ? (
-                      <div className="w-5 h-5 border-2 border-zinc-500 border-t-white rounded-full animate-spin" />
-                    ) : (
-                      <>
-                        Confirm
-                        <CheckCircle2 className="w-4 h-4" />
-                      </>
-                    )}
-                  </button>
-                </div>
+                {activeTaskId === task.id ? (
+                  <div className="space-y-4">
+                    <div 
+                      onClick={() => fileInputRef.current?.click()}
+                      className="border-2 border-dashed border-white/10 rounded-2xl p-6 text-center cursor-pointer hover:bg-white/5 transition-all"
+                    >
+                      {previewUrl ? (
+                        <img src={previewUrl} alt="Preview" className="max-h-32 mx-auto rounded-lg" />
+                      ) : (
+                        <div className="space-y-2">
+                          <Upload className="w-8 h-8 text-zinc-500 mx-auto" />
+                          <p className="text-sm text-zinc-400 font-bold">Upload Screenshot Proof</p>
+                        </div>
+                      )}
+                      <input 
+                        type="file" 
+                        ref={fileInputRef} 
+                        onChange={handleFileSelect} 
+                        className="hidden" 
+                        accept="image/*" 
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={() => setActiveTaskId(null)}
+                        className="flex-1 py-3 rounded-xl bg-zinc-800 text-zinc-400 font-bold text-sm"
+                      >
+                        Cancel
+                      </button>
+                      <button 
+                        onClick={() => handleSubmitProof(task.id)}
+                        disabled={!selectedFile || submittingId === task.id}
+                        className="flex-2 py-3 rounded-xl bg-orange-500 text-white font-bold text-sm disabled:opacity-50"
+                      >
+                        {submittingId === task.id ? 'Uploading...' : 'Submit Proof'}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex gap-3">
+                    <a
+                      href={task.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-1 flex items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-white font-bold py-4 rounded-2xl transition-all"
+                    >
+                      Open Link
+                      <ExternalLink className="w-4 h-4" />
+                    </a>
+                    <button
+                      onClick={() => setActiveTaskId(task.id)}
+                      className="flex-1 flex items-center justify-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-bold py-4 rounded-2xl shadow-lg shadow-orange-500/20 transition-all"
+                    >
+                      Submit Proof
+                      <Upload className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
               </motion.div>
             ))}
           </AnimatePresence>
